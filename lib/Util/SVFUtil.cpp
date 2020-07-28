@@ -32,7 +32,9 @@
 #include "SVF-FE/LLVMUtil.h"
 
 #include "Util/Conditions.h"
+#ifndef _MSC_VER
 #include <sys/resource.h>		/// increase stack size
+#endif
 
 using namespace SVF;
 
@@ -218,6 +220,7 @@ bool SVFUtil::getMemoryUsageKB(u32_t* vmrss_kb, u32_t* vmsize_kb)
  */
 void SVFUtil::increaseStackSize()
 {
+#ifndef _MSC_VER
     const rlim_t kStackSize = 256L * 1024L * 1024L;   // min stack size = 256 Mb
     struct rlimit rl;
     int result = getrlimit(RLIMIT_STACK, &rl);
@@ -231,6 +234,7 @@ void SVFUtil::increaseStackSize()
             	writeWrnMsg("setrlimit returned result !=0 \n");
         }
     }
+#endif
 }
 
 

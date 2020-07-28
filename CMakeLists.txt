@@ -13,6 +13,7 @@ if(NOT COMMAND add_llvm_library)
         # We need to match the build environment for LLVM:
         # In particular, we need C++14 and the -fno-rtti flag
         set(CMAKE_CXX_STANDARD 14)
+      if (CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX)
         set(CMAKE_CXX_STANDARD_REQUIRED ON)
         # add -std=gnu++14
         set(CMAKE_CXX_EXTENSIONS ON)
@@ -26,6 +27,10 @@ if(NOT COMMAND add_llvm_library)
             set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${COMMON_FLAGS} -O3 -fno-rtti")
             set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${COMMON_FLAGS} -O3")
         endif()
+      else()
+        # MSVC: Building on Windows
+        set(CMAKE_CXX_FLAGS "/wd4624 /wd4244 /wd4141")
+      endif()
 
         find_package(LLVM REQUIRED CONFIG)
         

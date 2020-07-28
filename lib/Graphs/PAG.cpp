@@ -1210,6 +1210,7 @@ struct DOTGraphTraits<PAG*> : public DefaultDOTGraphTraits
 
         assert(false && "No such kind edge!!");
         exit(1);
+        return std::string();
     }
 
     template<class EdgeIter>
