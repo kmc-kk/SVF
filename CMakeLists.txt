@@ -29,7 +29,7 @@ if(NOT COMMAND add_llvm_library)
         endif()
       else()
         # MSVC: Building on Windows
-        set(CMAKE_CXX_FLAGS "/wd4624 /wd4244 /wd4141")
+        set(CMAKE_CXX_FLAGS "/wd4624 /wd4244 /wd4141 /wd4530")
       endif()
 
         find_package(LLVM REQUIRED CONFIG)
