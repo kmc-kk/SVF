@@ -45,7 +45,7 @@ set_target_properties(Cudd PROPERTIES COMPILE_FLAGS "-Wno-format -Wno-int-to-poi
 else()  # MSVC
     add_llvm_library(Cudd ${SOURCES} LINK_LIBS)
     # target_link_libraries(Cudd)
-    set_target_properties(Cudd PROPERTIES COMPILE_FLAGS "/DSIZEOF_VOID_P=8 /DSIZEOF_LONG=8 /DHAVE_SYS_TIME_H=0 /DHAVE_SYS_RESOURCE_H=0")
+    set_target_properties(Cudd PROPERTIES COMPILE_FLAGS "/DSIZEOF_VOID_P=8 /DHAVE_SYS_TIME_H=0 /DHAVE_SYS_RESOURCE_H=0")
 endif()
 
 if(DEFINED IN_SOURCE_BUILD)
