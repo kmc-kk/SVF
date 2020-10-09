@@ -475,7 +475,7 @@ int main(int argc, char **argv) {
   PAG *pag = builder.build(svfModule);
   auto *solver = AndersenWaveDiff::createAndersenWaveDiff(pag);
 
-  DenseNodeSet pagNodes;
+  NodeSet pagNodes;
   for (PAG::iterator it = pag->begin(), eit = pag->end(); it != eit; it++) {
     pagNodes.insert(it->first);
   }
