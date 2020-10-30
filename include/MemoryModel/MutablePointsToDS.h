@@ -18,8 +18,10 @@ class MutablePTData : public PTData<Key, Datum, Data>
 public:
     typedef PTData<Key, Datum, Data> BasePTData;
     typedef typename BasePTData::PTDataTy PTDataTy;
+    typedef typename BasePTData::KeySet KeySet;
 
     typedef Map<Key, Data> PtsMap;
+    typedef Map<Datum, KeySet> RevPtsMap;
     typedef typename PtsMap::iterator PtsMapIter;
     typedef typename PtsMap::const_iterator PtsMapConstIter;
     typedef typename Data::iterator iterator;
@@ -46,9 +48,9 @@ public:
         return ptsMap[var];
     }
 
-    virtual inline const Data& getRevPts(const Key& var) override
+    virtual inline const KeySet& getRevPts(const Key& datum) override
     {
-        return revPtsMap[var];
+        return revPtsMap[datum];
     }
 
     virtual inline bool addPts(const Key &dstKey, const Datum& element) override
@@ -93,7 +95,7 @@ public:
 
     static inline bool classof(const PTData<Key, Datum, Data>* ptd)
     {
-        return ptd->getPTDTY() == PTDataTy::MutBase || ptd->getPTDTY() == PTDataTy::MutDiff;
+        return ptd->getPTDTY() == PTDataTy::MutBase;
     }
     ///@}
 
@@ -126,11 +128,11 @@ private:
     {
         return d.test_and_set(e);
     }
-    inline void addSingleRevPts(Data &revData, const Datum& tgr)
+    inline void addSingleRevPts(KeySet &revData, const Key& tgr)
     {
-        addPts(revData,tgr);
+        revData.insert(tgr);
     }
-    inline void addRevPts(const Data &ptsData, const Datum& tgr)
+    inline void addRevPts(const Data &ptsData, const Key& tgr)
     {
         for(iterator it = ptsData.begin(), eit = ptsData.end(); it!=eit; ++it)
             addSingleRevPts(revPtsMap[*it], tgr);
@@ -139,21 +141,20 @@ private:
 
 protected:
     PtsMap ptsMap;
-    PtsMap revPtsMap;
+    RevPtsMap revPtsMap;
 };
 
 /// DiffPTData implemented with points-to sets which are updated continuously.
-/// CachePtsMap is an additional map which maintains cached points-to information.
-template <typename Key, typename Datum, typename Data, typename CacheKey>
-class MutableDiffPTData : public DiffPTData<Key, Datum, Data, CacheKey>
+template <typename Key, typename Datum, typename Data>
+class MutableDiffPTData : public DiffPTData<Key, Datum, Data>
 {
 public:
     typedef PTData<Key, Datum, Data> BasePTData;
-    typedef DiffPTData<Key, Datum, Data, CacheKey> BaseDiffPTData;
+    typedef DiffPTData<Key, Datum, Data> BaseDiffPTData;
     typedef typename BasePTData::PTDataTy PTDataTy;
+    typedef typename BasePTData::KeySet KeySet;
 
     typedef typename MutablePTData<Key, Datum, Data>::PtsMap PtsMap;
-    typedef typename MutablePTData<CacheKey, Datum, Data>::PtsMap CachePtsMap;
 
     /// Constructor
     MutableDiffPTData(PTDataTy ty = PTDataTy::Diff) : BaseDiffPTData(ty) { }
@@ -175,9 +176,9 @@ public:
         return mutPTData.getPts(var);
     }
 
-    virtual inline const Data& getRevPts(const Key& var) override
+    virtual inline const KeySet& getRevPts(const Datum& datum) override
     {
-        return mutPTData.getRevPts(var);
+        return mutPTData.getRevPts(datum);
     }
 
     virtual inline bool addPts(const Key &dstKey, const Datum& element) override
@@ -210,20 +211,15 @@ public:
         mutPTData.dumpPTData();
     }
 
-    virtual inline Data &getDiffPts(Key &var) override
+    virtual inline const Data &getDiffPts(Key &var) override
     {
-        return diffPtsMap[var];
-    }
-
-    virtual inline Data &getPropaPts(Key &var) override
-    {
-        return propaPtsMap[var];
+        return getMutDiffPts(var);
     }
 
     virtual inline bool computeDiffPts(Key &var, const Data &all) override
     {
         /// Clear diff pts.
-        Data& diff = getDiffPts(var);
+        Data& diff = getMutDiffPts(var);
         diff.clear();
         /// Get all pts.
         Data& propa = getPropaPts(var);
@@ -244,19 +240,9 @@ public:
         getPropaPts(var).clear();
     }
 
-    virtual inline Data& getCachePts(CacheKey &cache) override
-    {
-        return cacheMap[cache];
-    }
-
-    virtual inline void addCachePts(CacheKey &cache, Data &data) override
-    {
-        cacheMap[cache] |= data;
-    }
-
     /// Methods to support type inquiry through isa, cast, and dyn_cast:
     ///@{
-    static inline bool classof(const MutableDiffPTData<Key, Datum, Data, CacheKey> *)
+    static inline bool classof(const MutableDiffPTData<Key, Datum, Data> *)
     {
         return true;
     }
@@ -267,6 +253,19 @@ public:
     }
     ///@}
 
+protected:
+    /// Get diff PTS that can be modified.
+    inline Data &getMutDiffPts(Key &var)
+    {
+        return diffPtsMap[var];
+    }
+
+    /// Get propagated points to.
+    inline Data &getPropaPts(Key &var)
+    {
+        return propaPtsMap[var];
+    }
+
 private:
     /// Backing to implement the basic PTData methods. This allows us to avoid multiple-inheritance.
     MutablePTData<Key, Datum, Data> mutPTData;
@@ -274,8 +273,6 @@ private:
     PtsMap diffPtsMap;
     /// Points-to already propagated.
     PtsMap propaPtsMap;
-    /// Points-to processed at load/store edges.
-    CachePtsMap cacheMap;
 };
 
 template <typename Key, typename Datum, typename Data>
@@ -286,6 +283,7 @@ public:
     typedef MutablePTData<Key, Datum, Data> BaseMutPTData;
     typedef DFPTData<Key, Datum, Data> BaseDFPTData;
     typedef typename BasePTData::PTDataTy PTDataTy;
+    typedef typename BasePTData::KeySet KeySet;
 
     typedef typename BaseDFPTData::LocID LocID;
     typedef typename BaseMutPTData::PtsMap PtsMap;
@@ -314,9 +312,9 @@ public:
         return mutPTData.getPts(var);
     }
 
-    virtual inline const Data& getRevPts(const Key& var) override
+    virtual inline const KeySet& getRevPts(const Datum& datum) override
     {
-        return mutPTData.getRevPts(var);
+        return mutPTData.getRevPts(datum);
     }
 
     virtual inline bool hasDFInSet(LocID loc) const override

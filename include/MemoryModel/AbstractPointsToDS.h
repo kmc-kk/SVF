@@ -37,6 +37,8 @@ template <typename Key, typename Datum, typename Data>
 class PTData
 {
 public:
+    typedef Set<Key> KeySet;
+
     /// Types of a points-to data structures.
     enum PTDataTy
     {
@@ -64,8 +66,8 @@ public:
 
     /// Get points-to set of var.
     virtual const Data& getPts(const Key& var) = 0;
-    /// Get reverse points-to set of var.
-    virtual const Data& getRevPts(const Key& var) = 0;
+    /// Get reverse points-to set of datum.
+    virtual const KeySet& getRevPts(const Datum& datum) = 0;
 
     /// Adds element to the points-to set associated with var.
     virtual bool addPts(const Key& var, const Datum& element) = 0;
@@ -90,7 +92,7 @@ protected:
 /// Abstract diff points-to data with cached information.
 /// This is an optimisation on top of the base points-to data structure.
 /// The points-to information is propagated incrementally only for the different parts.
-template <typename Key, typename Datum, typename Data, typename CacheKey>
+template <typename Key, typename Datum, typename Data>
 class DiffPTData : public PTData<Key, Datum, Data>
 {
 public:
@@ -102,10 +104,7 @@ public:
     virtual ~DiffPTData() { }
 
     /// Get diff points to.
-    virtual Data& getDiffPts(Key& var) = 0;
-
-    /// Get propagated points to.
-    virtual Data& getPropaPts(Key& var) = 0;
+    virtual const Data& getDiffPts(Key& var) = 0;
 
     /// Compute diff points to. Return TRUE if diff is not empty.
     /// 1. calculate diff: diff = all - propa.
@@ -119,15 +118,9 @@ public:
     /// Clear propagated points-to set of var.
     virtual void clearPropaPts(Key& var) = 0;
 
-    /// Get cached points-to
-    virtual Data& getCachePts(CacheKey& cache) = 0;
-
-    /// Add data to cached points-to set.
-    virtual void addCachePts(CacheKey& cache, Data& data) = 0;
-
     /// Methods to support type inquiry through isa, cast, and dyn_cast:
     ///@{
-    static inline bool classof(const DiffPTData<Key, Datum, Data, CacheKey> *)
+    static inline bool classof(const DiffPTData<Key, Datum, Data> *)
     {
         return true;
     }
