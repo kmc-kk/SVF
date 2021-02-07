@@ -30,6 +30,7 @@
 
 #include "SVF-FE/SymbolTableInfo.h"
 #include "MemoryModel/MemModel.h"
+#include "Util/NodeIDAllocator.h"
 #include "Util/SVFModule.h"
 #include "Util/SVFUtil.h"
 #include "SVF-FE/LLVMUtil.h"
@@ -43,7 +44,7 @@ using namespace SVFUtil;
 
 
 DataLayout* SymbolTableInfo::dl = NULL;
-SymbolTableInfo* SymbolTableInfo::symlnfo = NULL;
+SymbolTableInfo* SymbolTableInfo::symInfo = NULL;
 SymID SymbolTableInfo::totalSymNum = 0;
 
 static llvm::cl::opt<unsigned> maxFieldNumLimit("fieldlimit",  llvm::cl::init(512),
@@ -54,8 +55,6 @@ static llvm::cl::opt<bool> LocMemModel("locMM", llvm::cl::init(false),
 
 static llvm::cl::opt<bool> modelConsts("modelConsts", llvm::cl::init(false),
                                        llvm::cl::desc("Modeling individual constant objects"));
-
-
 
 /*
  * Initial the memory object here
@@ -95,17 +94,17 @@ void MemObj::init(const Value *val)
 /*!
  * Get the symbol table instance
  */
-SymbolTableInfo* SymbolTableInfo::Symbolnfo()
+SymbolTableInfo* SymbolTableInfo::SymbolInfo()
 {
-    if (symlnfo == NULL)
+    if (symInfo == NULL)
     {
         if(LocMemModel)
-            symlnfo = new LocSymTableInfo();
+            symInfo = new LocSymTableInfo();
         else
-            symlnfo = new SymbolTableInfo();
-        symlnfo->setModelConstants(modelConsts);
+            symInfo = new SymbolTableInfo();
+        symInfo->setModelConstants(modelConsts);
     }
-    return symlnfo;
+    return symInfo;
 }
 
 /*!
@@ -299,7 +298,7 @@ bool SymbolTableInfo::computeGepOffset(const User *V, LocationSet& ls)
         if (const StructType *ST = SVFUtil::dyn_cast<StructType>(*gi) )
         {
             assert(op && "non-const struct index in GEP");
-            const vector<u32_t> &so = SymbolTableInfo::Symbolnfo()->getFattenFieldIdxVec(ST);
+            const vector<u32_t> &so = SymbolTableInfo::SymbolInfo()->getFattenFieldIdxVec(ST);
             if ((unsigned)idx >= so.size())
             {
                 outs() << "!! Struct index out of bounds" << idx << "\n";
@@ -322,7 +321,7 @@ u32_t SymbolTableInfo::getFields(std::vector<LocationSet>& fields, const Type* T
         return 0;
 
     T = T->getContainedType(0);
-    const std::vector<FieldInfo>& stVec = SymbolTableInfo::Symbolnfo()->getFlattenFieldInfoVec(T);
+    const std::vector<FieldInfo>& stVec = SymbolTableInfo::SymbolInfo()->getFlattenFieldInfoVec(T);
     u32_t sz = stVec.size();
     if (msz < sz)
     {
@@ -590,6 +589,8 @@ void SymbolTableInfo::buildMemModel(SVFModule* svfModule)
             //@}
         }
     }
+
+    NodeIDAllocator::get()->endSymbolAllocation();
 }
 
 /*!
@@ -648,10 +649,11 @@ void SymbolTableInfo::collectVal(const Value *val)
     if (iter == valSymMap.end())
     {
         // create val sym and sym type
-        valSymMap.insert(std::make_pair(val, ++totalSymNum));
-        symTyMap.insert(std::make_pair(totalSymNum, ValSym));
+        SymID id = NodeIDAllocator::get()->allocateValueId();
+        valSymMap.insert(std::make_pair(val, id));
+        symTyMap.insert(std::make_pair(id, ValSym));
         DBOUT(DMemModel,
-              outs() << "create a new value sym " << totalSymNum << "\n");
+              outs() << "create a new value sym " << id << "\n");
         ///  handle global constant expression here
         if (const GlobalVariable* globalVar = SVFUtil::dyn_cast<GlobalVariable>(val))
             handleGlobalCE(globalVar);
@@ -679,15 +681,16 @@ void SymbolTableInfo::collectObj(const Value *val)
         else
         {
             // create obj sym and sym type
-            objSymMap.insert(std::make_pair(val, ++totalSymNum));
-            symTyMap.insert(std::make_pair(totalSymNum, ObjSym));
+            SymID id = NodeIDAllocator::get()->allocateObjectId();
+            objSymMap.insert(std::make_pair(val, id));
+            symTyMap.insert(std::make_pair(id, ObjSym));
             DBOUT(DMemModel,
-                  outs() << "create a new obj sym " << totalSymNum << "\n");
+                  outs() << "create a new obj sym " << id << "\n");
 
             // create a memory object
-            MemObj* mem = new MemObj(val, totalSymNum);
-            assert(objMap.find(totalSymNum) == objMap.end());
-            objMap[totalSymNum] = mem;
+            MemObj* mem = new MemObj(val, id);
+            assert(objMap.find(id) == objMap.end());
+            objMap[id] = mem;
         }
     }
 }
@@ -700,10 +703,11 @@ void SymbolTableInfo::collectRet(const Function *val)
     FunToIDMapTy::iterator iter = returnSymMap.find(val);
     if (iter == returnSymMap.end())
     {
-        returnSymMap.insert(std::make_pair(val, ++totalSymNum));
-        symTyMap.insert(std::make_pair(totalSymNum, RetSym));
+        SymID id = NodeIDAllocator::get()->allocateValueId();
+        returnSymMap.insert(std::make_pair(val, id));
+        symTyMap.insert(std::make_pair(id, RetSym));
         DBOUT(DMemModel,
-              outs() << "create a return sym " << totalSymNum << "\n");
+              outs() << "create a return sym " << id << "\n");
     }
 }
 
@@ -715,10 +719,11 @@ void SymbolTableInfo::collectVararg(const Function *val)
     FunToIDMapTy::iterator iter = varargSymMap.find(val);
     if (iter == varargSymMap.end())
     {
-        varargSymMap.insert(std::make_pair(val, ++totalSymNum));
-        symTyMap.insert(std::make_pair(totalSymNum, VarargSym));
+        SymID id = NodeIDAllocator::get()->allocateValueId();
+        varargSymMap.insert(std::make_pair(val, id));
+        symTyMap.insert(std::make_pair(id, VarargSym));
         DBOUT(DMemModel,
-              outs() << "create a vararg sym " << totalSymNum << "\n");
+              outs() << "create a vararg sym " << id << "\n");
     }
 }
 
@@ -751,8 +756,12 @@ bool SymbolTableInfo::isConstantObjSym(const Value *val)
     {
         if (cppUtil::isValVtbl(const_cast<GlobalVariable*>(v)))
             return false;
-        else if (!v->hasInitializer())
-            return true;
+        else if (!v->hasInitializer()){
+            if(v->isExternalLinkage(v->getLinkage()))
+                return false;
+            else
+                return true;
+        }
         else
         {
             StInfo *stInfo = getStructInfo(v->getInitializer()->getType());
@@ -912,7 +921,7 @@ void SymbolTableInfo::handleGlobalInitializerCE(const Constant *C,
     {
         const StructType *sty = SVFUtil::cast<StructType>(C->getType());
         const std::vector<u32_t>& offsetvect =
-            SymbolTableInfo::Symbolnfo()->getFattenFieldIdxVec(sty);
+            SymbolTableInfo::SymbolInfo()->getFattenFieldIdxVec(sty);
         for (u32_t i = 0, e = C->getNumOperands(); i != e; i++)
         {
             u32_t off = offsetvect[i];

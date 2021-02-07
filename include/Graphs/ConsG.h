@@ -165,9 +165,10 @@ public:
             auto eit = LoadCGEdgeSet.find(&edge);
             return *eit;
         }
-        else
+        else{
             assert(false && "no other kind!");
-	return nullptr;
+            return nullptr;
+        }
     }
 
     ///Add a PAG edge into Edge map

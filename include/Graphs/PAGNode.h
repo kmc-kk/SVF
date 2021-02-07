@@ -126,6 +126,7 @@ public:
         return isATPointer;
     }
     /// Whether it is constant data, i.e., "0", "1.001", "str"
+    /// or llvm's metadata, i.e., metadata !4087
     inline bool isConstantData() const
     {
         if (hasValue())
@@ -498,7 +499,7 @@ public:
     /// Return the type of this gep object
     inline virtual const llvm::Type* getType() const
     {
-        return SymbolTableInfo::Symbolnfo()->getOrigSubTypeWithByteOffset(mem->getType(), ls.getByteOffset());
+        return SymbolTableInfo::SymbolInfo()->getOrigSubTypeWithByteOffset(mem->getType(), ls.getByteOffset());
     }
 
     /// Return name of a LLVM value
