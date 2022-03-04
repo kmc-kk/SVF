@@ -1,5 +1,16 @@
 cmake_minimum_required(VERSION 3.4.3)
 
+if(MSVC)
+else() # if (CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX)
+    SET(CMAKE_C_COMPILER "/usr/bin/clang-10")
+    SET(CMAKE_CXX_COMPILER "/usr/bin/clang++-10")
+    #project(SVF LANGUAGES CXX C)
+    set (CMAKE_COMPILER_IS_GNUCC TRUE)
+    set (CMAKE_COMPILER_IS_GNUCXX TRUE)
+    #set(CMAKE_COMPILER_IS_GNUCC CACHE bool true FORCE)
+    #set(CMAKE_COMPILER_IS_GNUCXX CACHE bool true FORCE)
+endif()
+
 project("SVF")
 
 # To support both in- and out-of-source builds,
