@@ -98,7 +98,7 @@ int main(int argc, char ** argv)
     /// Create Andersen's pointer analysis
     Andersen* ander = AndersenWaveDiff::createAndersenWaveDiff(pag);
 
-    DenseNodeSet pagNodes;
+    NodeSet pagNodes;
     for(PAG::iterator it = pag->begin(), eit = pag->end(); it!=eit; it++)
     {
         pagNodes.insert(it->first);
