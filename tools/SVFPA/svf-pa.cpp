@@ -27,7 +27,7 @@ using namespace llvm;
 using namespace std;
 using namespace SVF;
 
-static constexpr char *SVFPA_VERSION = "0.0.1 (" __DATE__ " " __TIME__ ")";
+static const char *SVFPA_VERSION = "0.0.1 (" __DATE__ " " __TIME__ ")";
 
 static llvm::cl::opt<std::string>
     InputFilename(cl::Positional, llvm::cl::desc("<input bitcode>"),
