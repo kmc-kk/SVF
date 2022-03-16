@@ -30,7 +30,10 @@
 #ifndef POINTERANALYSIS_H_
 #define POINTERANALYSIS_H_
 
+#ifndef _MSC_VER
 #include <unistd.h>
+#else // MSVC
+#endif
 #include <signal.h>
 
 #include "Graphs/PAG.h"
