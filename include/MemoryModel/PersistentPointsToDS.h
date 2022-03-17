@@ -319,6 +319,10 @@ public:
     virtual inline const KeySet& getRevPts(const Data&) override
     {
         assert(false && "PersistentDFPTData::getRevPts: not supported yet!");
+#ifdef _MSC_VER // MSVC: Workaround compile error 
+        static const KeySet ks;
+        return ks;
+#endif
     }
 
     virtual inline bool unionPts(const Key& dstKey, const Key& srcKey) override
