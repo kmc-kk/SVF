@@ -34,6 +34,13 @@
 #include "Util/Conditions.h"
 #ifndef _MSC_VER
 #include <sys/resource.h>		/// increase stack size
+#else // MSVC
+#define signal(x, y)
+static inline unsigned int dummy_alarm(unsigned int seconds) {
+    _sleep(seconds);
+    return 0;
+}
+#define alarm(x) dummy_alarm(x)
 #endif
 
 using namespace SVF;
